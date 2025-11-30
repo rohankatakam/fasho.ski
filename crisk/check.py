@@ -17,6 +17,62 @@ from .logger import (
 )
 
 
+def generate_draft_message(staged_files: list[str], owners: dict, diff: str) -> str:
+    """
+    Generate a draft Slack message addressed to the primary owner.
+    owners: dict mapping owner email -> list of files they own
+    """
+    if not owners:
+        return ""
+
+    # Find primary owner (most files)
+    primary_owner = max(owners.keys(), key=lambda o: len(owners[o]))
+    primary_files = owners[primary_owner]
+    other_owners = {o: f for o, f in owners.items() if o != primary_owner}
+
+    # Extract username from email for @mention
+    def get_name(email: str) -> str:
+        # "91631593+jonathan-politzki@users.noreply.github.com" -> "jonathan-politzki"
+        # "rohankatakam@yahoo.com" -> "rohankatakam"
+        if '+' in email:
+            # GitHub noreply format
+            name = email.split('+')[1].split('@')[0]
+        else:
+            name = email.split('@')[0]
+        return name
+
+    primary_name = get_name(primary_owner)
+    staged_str = ', '.join(f'`{f}`' for f in staged_files[:2])
+    if len(staged_files) > 2:
+        staged_str += f' and {len(staged_files) - 2} more'
+
+    # Build message
+    msg = f"Hey @{primary_name} - I'm updating {staged_str}. "
+    msg += f"This might impact {len(primary_files)} file(s) you own"
+
+    # List a few key files
+    key_files = [f.split('/')[-1] for f in primary_files[:3]]
+    if key_files:
+        msg += f" ({', '.join(key_files)}"
+        if len(primary_files) > 3:
+            msg += f", +{len(primary_files) - 3} more"
+        msg += ")"
+    msg += "."
+
+    # Add CC for other owners
+    if other_owners:
+        cc_parts = []
+        for owner, files in other_owners.items():
+            name = get_name(owner)
+            file_names = [f.split('/')[-1] for f in files[:2]]
+            cc_parts.append(f"@{name} for {', '.join(file_names)}")
+        msg += f" CC {'; '.join(cc_parts)}."
+
+    msg += " Any concerns?"
+
+    return msg
+
+
 def get_staged_diff() -> str:
     """Get the staged git diff."""
     result = subprocess.run(
@@ -279,6 +335,14 @@ def run_check(auto_draft: bool = False) -> int:
     for r in related_files:
         r["owner"] = get_file_owner(r["filename"])
 
+    # Group by owner
+    owners = {}
+    for r in related_files:
+        owner = r["owner"]
+        if owner not in owners:
+            owners[owner] = []
+        owners[owner].append(r["filename"])
+
     # Step 6: Display results
     print("\n" + "=" * 50)
     print("⚠️  Your changes may impact:\n")
@@ -292,7 +356,10 @@ def run_check(auto_draft: bool = False) -> int:
     # Step 7: Show draft message
     print("=" * 50)
 
-    if auto_draft and draft_message:
+    # Generate draft message locally (with actual owner emails)
+    draft_message = generate_draft_message(staged_files, owners, diff)
+
+    if auto_draft:
         print("\n✍️  Generated draft message...")
         print("\n" + "-" * 50)
         print("DRAFT MESSAGE:")
@@ -300,35 +367,20 @@ def run_check(auto_draft: bool = False) -> int:
         print(draft_message)
         print("-" * 50)
 
-        # Group by owner
-        owners = {}
-        for r in related_files:
-            owner = r["owner"]
-            if owner not in owners:
-                owners[owner] = []
-            owners[owner].append(r["filename"])
-
         print("\n📬 Recipients:")
         for owner, files in owners.items():
             print(f"   • {owner}")
             for f in files:
                 print(f"     - {f}")
-    elif not auto_draft:
+    else:
         try:
             response = input("\n📨 Generate draft message to owners? [y/n]: ").strip().lower()
-            if response == 'y' and draft_message:
+            if response == 'y':
                 print("\n" + "-" * 50)
                 print("DRAFT MESSAGE:")
                 print("-" * 50)
                 print(draft_message)
                 print("-" * 50)
-
-                owners = {}
-                for r in related_files:
-                    owner = r["owner"]
-                    if owner not in owners:
-                        owners[owner] = []
-                    owners[owner].append(r["filename"])
 
                 print("\n📬 Recipients:")
                 for owner, files in owners.items():
