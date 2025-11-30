@@ -71,12 +71,12 @@ This might impact auth.py and __init__.py. Any concerns?"
 ### Install
 
 ```bash
-pip install git+https://github.com/rohankatakam/fasho.ski.git
+pip install crisk
 ```
 
 Or with uv:
 ```bash
-uv pip install git+https://github.com/rohankatakam/fasho.ski.git
+uv pip install crisk
 ```
 
 ### Login

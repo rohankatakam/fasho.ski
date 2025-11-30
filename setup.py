@@ -14,7 +14,7 @@ setup(
     description="Change Risk Analysis CLI - Find impacted files and notify owners",
     long_description=long_description,
     long_description_content_type="text/markdown",
-    url="https://github.com/coderisk/crisk",
+    url="https://github.com/rohankatakam/fasho.ski",
     packages=find_packages(),
     classifiers=[
         "Development Status :: 3 - Alpha",
