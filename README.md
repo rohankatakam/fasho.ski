@@ -66,7 +66,39 @@ This might impact auth.py and __init__.py. Any concerns?"
    • jonathan@company.com (8 files)
 ```
 
-## Setup
+## Quick Start (Cloud Version)
+
+### Install
+
+```bash
+pip install git+https://github.com/rohankatakam/blame-router.git
+```
+
+Or with uv:
+```bash
+uv pip install git+https://github.com/rohankatakam/blame-router.git
+```
+
+### Login
+
+```bash
+crisk login
+```
+
+This opens your browser to authenticate with [coderisk.dev](https://coderisk.dev). Once logged in, you're ready to go.
+
+### Use
+
+```bash
+git add src/client.py
+crisk check --draft
+```
+
+---
+
+## Local Setup (Self-hosted)
+
+If you want to run everything locally with your own API keys:
 
 ### 1. Install dependencies
 
